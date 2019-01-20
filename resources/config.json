@@ -1,0 +1,11 @@
+{
+  "url" : "http://www.example.com",
+  "path": "/moodle/login/token.php",
+  "parameters": {
+    "username": "",
+    "password": "",
+    "service": "moodle_mobile_app",
+    "moodlewsrestformat": "json"
+  },
+  "tor_address": "socks5://localhost:9050"
+}
