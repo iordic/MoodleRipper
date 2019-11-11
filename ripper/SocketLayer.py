@@ -1,40 +1,35 @@
 import requests
-import random
-import json
+
+TOR_CHECK_ADDRESS = 'https://check.torproject.org/api/ip'
 
 
 class SocketLayer:
     user_agent = None
     config = None
-    # Files
-    AGENTS_FILE = "resources/user_agents.json"
-    CONFIG_FILE = "resources/config.json"
 
-    def __init__(self, use_tor=False, user_agent=None):
+    def __init__(self, configuration):
+        self.config = configuration
         self.session = requests.session()
-        if user_agent is None:
-            # If user agent is not define, choice a random one from user agents file
-            with open(self.AGENTS_FILE) as agents:
-                agents_array = json.load(agents)
-                selected_agent = random.choice(agents_array)    # Select random agent from file
-            self.session.headers.update({'User-Agent': selected_agent})
-        else:
-            self.session.headers.update({'User-Agent': user_agent})
-        with open(self.CONFIG_FILE) as conf:
-            self.config = json.load(conf)
-        if use_tor:
-            self.session.proxies = {'http': self.config['tor_address'], 'https': self.config['tor_address']}
+        self.session.headers.update({'User-Agent': self.config.selected_agent})
+        if self.config.use_tor:
+            self.session.proxies = {'http': self.config.proxy, 'https': self.config.proxy}
+            if not self.check_tor():
+                print("Tor proxy is not running, aborting.")
+                quit()
 
     def try_login(self, user, password):
-        url = self.config['url'] + self.config['path']
-        self.config['parameters']['username'] = user
-        self.config['parameters']['password'] = password
-        response = self.session.get(url, params=self.config['parameters'])
+        url = self.config.url_target
+        self.config.parameters['username'] = user
+        self.config.parameters['password'] = password
+        response = self.session.get(url, params=self.config.parameters)
         return response.json()
 
     def check_tor(self):
-        response = self.session.get('https://check.torproject.org/api/ip')
-        return response.json()['IsTor']
+        try:
+            response = self.session.get(TOR_CHECK_ADDRESS)
+            return response.json()['IsTor']
+        except requests.RequestException:
+            return False
 
     def get_json(self, address):
         response = self.session.get(address)

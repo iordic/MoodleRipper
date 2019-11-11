@@ -1,13 +1,15 @@
-import unittest
+from resources.Configuration import Configuration
 from ripper.SocketLayer import SocketLayer
-import json
+import unittest
 
 
 class TestSocketLayer(unittest.TestCase):
 
     def setUp(self):
-        self.socket = SocketLayer(False)        # plain connection
-        self.tor_socket = SocketLayer(True)     # tor connection
+        self.tor_configuration = Configuration(use_tor=True)
+        self.plain_configuration = Configuration()
+        self.socket = SocketLayer(self.plain_configuration)     # plain connection
+        self.tor_socket = SocketLayer(self.tor_configuration)   # tor connection
 
     def tearDown(self):
         self.socket.close_session()             # close both sockets
@@ -29,8 +31,6 @@ class TestSocketLayer(unittest.TestCase):
         self.assertFalse(response)
 
     def test_user_agent(self):
-        with open('../resources/user_agents.json', 'r') as ags:
-            agents = json.load(ags)
         response = self.socket.get_json('https://httpbin.org/headers')
         response_agent = response['headers']['User-Agent']
-        self.assertTrue(response_agent in agents)
+        self.assertTrue(response_agent in self.plain_configuration.selected_agent)

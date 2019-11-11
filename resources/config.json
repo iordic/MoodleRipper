@@ -7,5 +7,5 @@
     "service": "moodle_mobile_app",
     "moodlewsrestformat": "json"
   },
-  "tor_address": "socks5://localhost:9050"
+  "proxy": "socks5://127.0.0.1:9050"
 }

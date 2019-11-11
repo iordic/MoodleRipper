@@ -3,11 +3,11 @@ Tool for automated dictionary based attacks against moodle with REST API enabled
 
 ## To-Do list
 The code needs some improvements:
-- [ ] Comment the code
-- [ ] More verbosity at execution output
-- [ ] Save results to a file
+- [~] Comment the code
+- [x] More verbosity at execution output
+- [x] Save results to a file
 - [ ] Improve this README file
 ### Optional
-- [ ] Automation of Tor execution over windows
+- [ ] Automation of Tor execution (maybe stem library)
 - [ ] "Multithreading" execution
-- [ ] Save session status allowing to continue with the next user not probed.
+- [x] Save session status allowing to continue with the next user not probed.
