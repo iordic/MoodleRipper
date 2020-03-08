@@ -50,11 +50,13 @@ class Ripper:
                 self.configuration.next_target(result)
             print("\nFINISHED. All users tested. Saving results to file {}...".format(RESULTS_FILE), end="")
             self.save_results(RESULTS_FILE)
+            self.socket.close_session()
             print(" DONE")
         except KeyboardInterrupt:
             print("Aborted: Saving sesion to {} and results to {}...".format(SESSION_FILE, RESULTS_FILE), end="")
             self.save_session()
             print(" DONE")
+            self.socket.close_session()
             exit()
 
     def save_session(self):
